@@ -4,7 +4,9 @@ import (
 	"database/sql"
 	"fmt"
 	"log"
+	"strconv"
 
+	"github.com/gofiber/fiber/v2"
 	_ "github.com/lib/pq"
 )
 
@@ -22,9 +24,9 @@ var db *sql.DB
 
 // database struct
 type Product struct {
-	Id    int
-	Name  string
-	Price int
+	Id    int    `json:"id"`
+	Name  string `json:"name"`
+	Price int    `json:"price"`
 }
 
 func main() {
@@ -40,6 +42,7 @@ func main() {
 	}
 
 	db = tempdb
+	defer db.Close()
 	// Check the connection
 	// Ping to database and database response back
 	err = db.Ping()
@@ -68,58 +71,81 @@ func main() {
 	// }
 	// fmt.Println("Get Product Successfully", product)
 
-	// get product by id
-	p, err := getAllProducts()
-	if err != nil {
-		log.Fatal(err)
-	}
-	fmt.Println("Get Product Successfully", p)
-
+	// get all product
+	// p, err := getAllProducts()
+	// if err != nil {
+	// 	log.Fatal(err)
+	// }
+	// fmt.Println("Get Product Successfully", p)
+	app := fiber.New()
+	app.Get("/product/:id", getProductsByIdHandler)
+	app.Get("/products", getAllProductsHandler)
+	app.Post("/create", createProductHandler)
+	app.Post("/product/:id/edit", updateProductHandler)
+	app.Delete("/product/:id", deleteProductHandler)
+	app.Listen(":8080")
 }
 
-func createProduct(product *Product) error {
-	_, err := db.Exec("INSERT INTO public.products(name, price) VALUES ($1, $2);", product.Name, product.Price)
-	return err
+func getAllProductsHandler(c *fiber.Ctx) error {
+	product, err := getAllProducts()
+	if err != nil {
+		return c.SendStatus(fiber.StatusBadRequest)
+	}
+	return c.JSON(product)
 }
 
-func getProduct(id int) (Product, error) {
-	var p Product
-	row := db.QueryRow(`SELECT id, name, price FROM products WHERE id = $1;`, id)
-	err := row.Scan(&p.Id, &p.Name, &p.Price)
+func getProductsByIdHandler(c *fiber.Ctx) error {
+	productId, err := strconv.Atoi(c.Params("id"))
 	if err != nil {
-		return Product{}, err
+		return c.SendStatus(fiber.StatusBadRequest)
 	}
-	return p, nil
+	product, err := getProduct(productId)
+	if err != nil {
+		return c.SendStatus(fiber.StatusBadRequest)
+	}
+	return c.JSON(product)
 }
 
-func getAllProducts() ([]Product, error) {
-	var p []Product
-	rows, err := db.Query(`SELECT id, name, price FROM products`)
+func createProductHandler(c *fiber.Ctx) error {
+	p := new(Product)
+	if err := c.BodyParser(p); err != nil {
+		return c.SendStatus(fiber.StatusBadRequest)
+	}
+	err := createProduct(p)
 	if err != nil {
-		return nil, err
+		return c.SendStatus(fiber.StatusBadRequest)
 	}
-	for rows.Next() {
-		var productItem Product
-		err := rows.Scan(&productItem.Id, &productItem.Name, &productItem.Price)
-		if err != nil {
-			return nil, err
-		}
-		p = append(p, productItem)
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return p, nil
+	return c.JSON(p)
 }
 
-func updateProduct(id int, product *Product) (Product, error) {
-	// exec รันคำสั่งแต่ไม่คืนค่าอะไรออกมา
-	// QueryRow รันคำสั่ง และคืนค่าบางอย่างออกมา
-	var p Product
-	row := db.QueryRow("UPDATE public.products SET name=$1, price=$2 WHERE id=$3 RETURNING id, name, price;", product.Name, product.Price, id)
-	err := row.Scan(&p.Id, &p.Name, &p.Price)
+func updateProductHandler(c *fiber.Ctx) error {
+	productId, err := strconv.Atoi(c.Params("id"))
 	if err != nil {
-		return Product{}, err
+		return c.SendStatus(fiber.StatusBadRequest)
 	}
-	return p, err
+
+	p := new(Product)
+	if err := c.BodyParser(p); err != nil {
+		return c.SendStatus(fiber.StatusBadRequest)
+	}
+
+	product, err := updateProduct(productId, p)
+	if err != nil {
+		return c.SendStatus(fiber.StatusBadRequest)
+	}
+
+	return c.JSON(product)
+}
+
+func deleteProductHandler(c *fiber.Ctx) error {
+	productId, err := strconv.Atoi(c.Params("id"))
+	if err != nil {
+		return c.SendStatus(fiber.StatusBadRequest)
+	}
+
+	err = deleteProduct(productId)
+	if err != nil {
+		return c.SendStatus(fiber.StatusBadRequest)
+	}
+	return c.SendStatus(fiber.StatusOK)
 }
