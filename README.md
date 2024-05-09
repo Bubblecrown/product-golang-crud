@@ -1,8 +1,8 @@
-# Product API with CRUD Operations (Fiber, PostgreSQL)
+## Product API with CRUD Operations (Fiber, PostgreSQL)
 
 This project implements a RESTful API for managing products using Fiber, a high-performance web framework for Go, and PostgreSQL, a powerful and versatile open-source relational database. It offers comprehensive CRUD (Create, Read, Update, Delete) functionality for product data, enabling your application to interact with product information effectively.
 
-Key Features:
+### Key Features:
 
 - CRUD Operations: Create, retrieve, update, and delete product data.
 - Fiber Framework: Leverages Fiber's speed and flexibility for efficient API development.
