@@ -8,7 +8,7 @@ Key Features:
 - Fiber Framework: Leverages Fiber's speed and flexibility for efficient API development.
 - PostgreSQL Database: Employs PostgreSQL for reliable and scalable data storage.
 
-#API Endpoints:
+### API Endpoints:
 
 /products (GET): Retrieves a list of all products.
 /product/:id (GET): Fetches a specific product by its ID.
